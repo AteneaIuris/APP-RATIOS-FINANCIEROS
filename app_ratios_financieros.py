@@ -1,12 +1,14 @@
 import streamlit as st
 import pandas as pd
 import io
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Ratios Financieros", layout="wide")
-st.title("📊 Cálculo de Ratios Financieros")
-st.markdown("Carga un **Balance de Situación** y una **Cuenta de Pérdidas y Ganancias** en formato Excel para obtener automáticamente los principales ratios económicos y financieros.")
+st.set_page_config(page_title="Ratios Financieros Avanzados", layout="wide")
 
-# --- Función para buscar partidas ---
+st.title("📊 Dashboard de Ratios Financieros")
+st.markdown("Esta herramienta permite calcular, interpretar y visualizar ratios financieros clave a partir de un balance de situación y cuenta de pérdidas y ganancias en formato Excel.")
+
+# ===== FUNCIÓN PARA LOCALIZAR VALORES POR NOMBRE DE CUENTA =====
 def buscar_valor_por_nombre(df, clave, columna_valor='Importe 2024'):
     df['Cuenta'] = df['Cuenta'].astype(str)
     coincidencias = df[df['Cuenta'].str.contains(clave, case=False, na=False)]
@@ -14,34 +16,99 @@ def buscar_valor_por_nombre(df, clave, columna_valor='Importe 2024'):
         return float(coincidencias.iloc[0][columna_valor])
     return 0.0
 
-# --- Función segura de división ---
+# ===== FUNCIÓN SEGURA DE DIVISIÓN =====
 def safe_div(numerador, denominador):
     try:
         return numerador / denominador if denominador != 0 else None
     except:
         return None
 
-# --- Subida de archivos ---
+# ===== FUNCIONES DE COLOR Y COMENTARIO POR RATIO =====
+def evaluar_ratio(nombre, valor):
+    if valor is None:
+        return "🔘", "No disponible"
+
+    # Definiciones estándar
+    if nombre == "Liquidez General":
+        if valor > 1.5: return "🟢", "Buena capacidad de pago a corto plazo."
+        elif valor >= 1.0: return "🟡", "Liquidez aceptable, debe vigilarse."
+        else: return "🔴", "Posible insolvencia a corto plazo."
+
+    elif nombre == "Prueba Ácida":
+        if valor > 1.0: return "🟢", "Suficiencia inmediata sin existencias."
+        elif valor >= 0.8: return "🟡", "Liquidez justa sin inventario."
+        else: return "🔴", "Insuficiencia para cubrir pasivos inmediatos."
+
+    elif nombre == "Ratio de Tesorería":
+        if valor > 0.5: return "🟢", "Buena cobertura de pasivo con caja."
+        elif valor >= 0.2: return "🟡", "Cierta tensión en tesorería."
+        else: return "🔴", "Riesgo de falta de efectivo."
+
+    elif nombre == "Endeudamiento Total":
+        if valor < 1.0: return "🟢", "Bajo nivel de apalancamiento."
+        elif valor <= 2.0: return "🟡", "Endeudamiento moderado."
+        else: return "🔴", "Alta dependencia de deuda."
+
+    elif nombre == "Cobertura de Gastos Financieros":
+        if valor > 3.0: return "🟢", "Intereses cubiertos cómodamente."
+        elif valor >= 1.5: return "🟡", "Cobertura ajustada."
+        else: return "🔴", "Peligro financiero: EBIT insuficiente."
+
+    elif nombre == "ROA":
+        if valor > 0.05: return "🟢", "Buena rentabilidad de los activos."
+        elif valor >= 0.02: return "🟡", "Rentabilidad discreta."
+        else: return "🔴", "Baja eficiencia del capital invertido."
+
+    elif nombre == "ROS":
+        if valor > 0.07: return "🟢", "Margen neto adecuado."
+        elif valor >= 0.03: return "🟡", "Rentabilidad limitada."
+        else: return "🔴", "Margen muy reducido."
+
+    elif nombre == "ROCE":
+        if valor > 0.10: return "🟢", "Buen rendimiento del capital operativo."
+        elif valor >= 0.05: return "🟡", "Rendimiento aceptable."
+        else: return "🔴", "Rentabilidad insuficiente sobre el capital."
+
+    elif nombre == "Rotación de Existencias":
+        if valor > 5: return "🟢", "Almacén eficiente y dinámico."
+        elif valor >= 3: return "🟡", "Rotación adecuada pero mejorable."
+        else: return "🔴", "Riesgo de acumulación de existencias."
+
+    elif nombre in ["PMC (Clientes)", "PMP (Proveedores)"]:
+        if valor < 90: return "🟢", "Ciclo de cobro/pago saludable."
+        elif valor <= 120: return "🟡", "Periodo algo prolongado."
+        else: return "🔴", "Cobro o pago excesivamente lento."
+
+    elif nombre == "Ciclo de Conversión de Caja":
+        if valor < 60: return "🟢", "Ciclo financiero eficiente."
+        elif valor <= 120: return "🟡", "Ciclo medio controlado."
+        else: return "🔴", "Ciclo de caja muy largo."
+
+    elif nombre == "Apalancamiento Financiero":
+        if 1.0 <= valor <= 1.5: return "🟢", "Apalancamiento equilibrado."
+        elif 0.8 <= valor <= 1.0 or 1.5 < valor <= 2.0: return "🟡", "Moderado, requiere atención."
+        else: return "🔴", "Riesgo alto o escasa ventaja del apalancamiento."
+
+    return "🔘", "Interpretación no definida."
+
+# ===== CARGA DE ARCHIVOS =====
 col1, col2 = st.columns(2)
 with col1:
     balance_file = st.file_uploader("📁 Subir Balance de Situación", type=["xlsx"], key="balance")
 with col2:
     pyg_file = st.file_uploader("📁 Subir Cuenta de Pérdidas y Ganancias", type=["xlsx"], key="pyg")
 
-# --- Procesamiento cuando ambos archivos están presentes ---
 if balance_file and pyg_file:
     try:
-        # Leer hojas
         activo_df = pd.read_excel(balance_file, sheet_name="Activo", skiprows=5)
         pasivo_df = pd.read_excel(balance_file, sheet_name="Pasivo", skiprows=5)
         pyg_df = pd.read_excel(pyg_file, sheet_name="Cuenta de Pérdidas y Ganancias", skiprows=5)
 
-        # Renombrar columnas según estructura
         activo_df.columns = ['Cuenta', 'Importe']
         pasivo_df.columns = ['Cuenta', 'Importe 2024', 'Importe 2023']
         pyg_df.columns = ['Cuenta', 'Importe 2024', 'Importe 2023']
 
-        # --- Extracción de partidas ---
+        # ===== EXTRACCIÓN DE PARTIDAS =====
         activo_corriente = buscar_valor_por_nombre(activo_df, "ACTIVO CORRIENTE", "Importe")
         existencias = buscar_valor_por_nombre(activo_df, "EXISTENCIAS", "Importe")
         tesoreria = buscar_valor_por_nombre(activo_df, "TESORERÍA", "Importe")
@@ -62,42 +129,90 @@ if balance_file and pyg_file:
         ebit = buscar_valor_por_nombre(pyg_df, "RESULTADO DE EXPLOTACIÓN")
         beneficio_neto = buscar_valor_por_nombre(pyg_df, "RESULTADO DEL EJERCICIO")
 
-        # --- Cálculo de ratios ---
+        # ===== CÁLCULO DE RATIOS =====
         ratios = {
-            "1. Liquidez General": safe_div(activo_corriente, pasivo_corriente),
-            "2. Prueba Ácida": safe_div((activo_corriente - existencias), pasivo_corriente),
-            "3. Ratio de Tesorería": safe_div((tesoreria + inversiones_cp), pasivo_corriente),
-            "4. Endeudamiento Total": safe_div(pasivo_total, patrimonio_neto),
-            "5. Cobertura de Gastos Financieros": safe_div(ebit, gastos_financieros),
-            "6. ROA": safe_div(beneficio_neto, activo_total),
-            "7. ROS": safe_div(beneficio_neto, ventas),
-            "8. ROCE": safe_div(ebit, patrimonio_neto + pasivo_no_corriente),
-            "9. Rotación de Existencias": safe_div(consumo_explotacion, existencias),
-            "10. PMC (Clientes)": safe_div(clientes, ventas) * 365 if ventas else None,
-            "11. PMP (Proveedores)": safe_div(proveedores, compras) * 365 if compras else None,
-            "12. Ciclo de Conversión de Caja": (
+            "Liquidez General": safe_div(activo_corriente, pasivo_corriente),
+            "Prueba Ácida": safe_div((activo_corriente - existencias), pasivo_corriente),
+            "Ratio de Tesorería": safe_div((tesoreria + inversiones_cp), pasivo_corriente),
+            "Endeudamiento Total": safe_div(pasivo_total, patrimonio_neto),
+            "Cobertura de Gastos Financieros": safe_div(ebit, gastos_financieros),
+            "ROA": safe_div(beneficio_neto, activo_total),
+            "ROS": safe_div(beneficio_neto, ventas),
+            "ROCE": safe_div(ebit, patrimonio_neto + pasivo_no_corriente),
+            "Rotación de Existencias": safe_div(consumo_explotacion, existencias),
+            "PMC (Clientes)": safe_div(clientes, ventas) * 365 if ventas else None,
+            "PMP (Proveedores)": safe_div(proveedores, compras) * 365 if compras else None,
+            "Ciclo de Conversión de Caja": (
                 (safe_div(clientes, ventas) * 365 if ventas else 0) +
                 (365 / safe_div(consumo_explotacion, existencias) if existencias and consumo_explotacion else 0) -
                 (safe_div(proveedores, compras) * 365 if compras else 0)
             ),
-            "13. Apalancamiento Financiero": safe_div(
+            "Apalancamiento Financiero": safe_div(
                 safe_div(beneficio_neto, patrimonio_neto),
                 safe_div(beneficio_neto, activo_total)
             ) if beneficio_neto and patrimonio_neto and activo_total else None
         }
 
-        # --- Visualización y exportación ---
-        ratios_df = pd.DataFrame(ratios.items(), columns=["Ratio", "Valor"]).round(4)
-        ratios_df["Valor"] = ratios_df["Valor"].fillna("N/A")
-        st.success("✅ Ratios calculados correctamente")
-        st.dataframe(ratios_df, use_container_width=True)
+        # ===== KPI AGRUPADOS POR CATEGORÍA =====
+        categorias = {
+            "💧 Liquidez": ["Liquidez General", "Prueba Ácida", "Ratio de Tesorería"],
+            "💰 Rentabilidad": ["ROA", "ROS", "ROCE"],
+            "⚖️ Endeudamiento y Solvencia": ["Endeudamiento Total", "Cobertura de Gastos Financieros", "Apalancamiento Financiero"],
+            "🔄 Ciclo Operativo": ["Rotación de Existencias", "PMC (Clientes)", "PMP (Proveedores)", "Ciclo de Conversión de Caja"]
+        }
 
-        # Exportar a Excel
+        # ===== DASHBOARD POR CATEGORÍA =====
+        st.subheader("📊 Panel de Indicadores por Categoría")
+        for categoria, lista_ratios in categorias.items():
+            st.markdown(f"### {categoria}")
+            col1, col2, col3 = st.columns(3)
+            for i, nombre in enumerate(lista_ratios):
+                valor = ratios[nombre]
+                icono, comentario = evaluar_ratio(nombre, valor)
+                display_valor = f"{valor:.2f}" if isinstance(valor, (int, float)) else "N/A"
+
+                # Render en columna correspondiente
+                if i % 3 == 0:
+                    col = col1
+                elif i % 3 == 1:
+                    col = col2
+                else:
+                    col = col3
+
+                col.metric(label=f"{icono} {nombre}", value=display_valor, help=comentario)
+
+        # ===== TABLA COMPLETA CON INTERPRETACIÓN =====
+        st.subheader("📄 Tabla Detallada con Interpretación")
+        tabla_ratios = []
+        for nombre, valor in ratios.items():
+            icono, comentario = evaluar_ratio(nombre, valor)
+            tabla_ratios.append({
+                "Ratio": nombre,
+                "Valor": round(valor, 4) if valor is not None else "N/A",
+                "Evaluación": icono,
+                "Comentario": comentario
+            })
+
+        tabla_df = pd.DataFrame(tabla_ratios)
+        st.dataframe(tabla_df, use_container_width=True)
+
+        # ===== GRÁFICO =====
+        st.subheader("📈 Representación Gráfica")
+        grafico_df = tabla_df[tabla_df["Valor"] != "N/A"].copy()
+        grafico_df["Valor"] = pd.to_numeric(grafico_df["Valor"])
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.barh(grafico_df["Ratio"], grafico_df["Valor"], color="steelblue")
+        ax.set_xlabel("Valor")
+        ax.set_title("Ratios Financieros 2024")
+        st.pyplot(fig)
+
+        # ===== EXPORTACIÓN EXCEL =====
+        st.subheader("📥 Exportar Resultados")
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            ratios_df.to_excel(writer, index=False, sheet_name="Ratios 2024")
+            tabla_df.to_excel(writer, index=False, sheet_name="Ratios Financieros")
         st.download_button(
-            label="📥 Descargar ratios en Excel",
+            label="📤 Descargar en Excel",
             data=output.getvalue(),
             file_name="ratios_financieros.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -105,5 +220,4 @@ if balance_file and pyg_file:
 
     except Exception as e:
         st.error(f"❌ Error al procesar los archivos: {e}")
-
 
