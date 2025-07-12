@@ -24,7 +24,7 @@ def autenticar():
         if usuario in USUARIOS and USUARIOS[usuario] == contrasena:
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
-            st.success(f"✅ Bienvenido, {usuario}. Accediendo al entorno...")
+            st.session_state["acceso_concedido"] = True  # bandera de acceso
         else:
             st.error("❌ Usuario o contraseña incorrectos")
 
@@ -34,6 +34,12 @@ if "autenticado" not in st.session_state:
 
 if not st.session_state["autenticado"]:
     autenticar()
+    st.stop()
+
+# ===== TRANSICIÓN POST-LOGIN (una sola vez) =====
+if st.session_state.get("acceso_concedido"):
+    st.success(f"✅ Bienvenido, {st.session_state['usuario']}. Accediendo al entorno...")
+    st.session_state["acceso_concedido"] = False
     st.stop()
 
 # ===== PERFIL ACTIVO Y CIERRE DE SESIÓN =====
