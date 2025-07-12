@@ -4,7 +4,7 @@ import pandas as pd
 import io
 import matplotlib.pyplot as plt
 
-# ===== CONFIGURACIÓN GENERAL =====
+## ===== CONFIGURACIÓN GENERAL =====
 st.set_page_config(page_title="Ratios Financieros Avanzados", layout="wide")
 st.title("📊 Dashboard de Ratios Financieros")
 st.markdown("Esta herramienta permite calcular, interpretar y visualizar ratios financieros clave a partir de un balance de situación y cuenta de pérdidas y ganancias en formato Excel.")
@@ -20,6 +20,8 @@ if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 if "acceso_concedido" not in st.session_state:
     st.session_state["acceso_concedido"] = False
+if "dashboard_visible" not in st.session_state:
+    st.session_state["dashboard_visible"] = False
 if "usuario" not in st.session_state:
     st.session_state["usuario"] = ""
 
@@ -42,21 +44,15 @@ if not st.session_state["autenticado"]:
     autenticar()
     st.stop()
 
-# ===== TRANSICIÓN TRAS LOGIN (UNA VEZ) =====
-if st.session_state["acceso_concedido"]:
+# ===== TRANSICIÓN TRAS LOGIN =====
+if st.session_state["acceso_concedido"] and not st.session_state["dashboard_visible"]:
     st.success(f"✅ Bienvenido, {st.session_state['usuario']}. Accediendo al entorno...")
-
-    # Recarga automática tras 1.5 segundos para desbloquear contenido
-    components.html("""
-        <script>
-            setTimeout(function() {
-                window.location.reload();
-            }, 1500);
-        </script>
-    """, height=0)
-
-    st.session_state["acceso_concedido"] = False
-    st.stop()
+    
+    if st.button("Entrar al dashboard"):
+        st.session_state["dashboard_visible"] = True
+        st.session_state["acceso_concedido"] = False
+    else:
+        st.stop()
 
 # ===== PANEL LATERAL Y CIERRE DE SESIÓN =====
 with st.sidebar:
@@ -65,7 +61,7 @@ with st.sidebar:
         st.session_state.clear()
         st.success("🔒 Sesión cerrada correctamente.")
         st.stop()
-
+        
 # ===== FUNCIONES =====
 def buscar_valor_por_nombre(df, clave, columna_valor='Importe 2024'):
     df['Cuenta'] = df['Cuenta'].astype(str)
