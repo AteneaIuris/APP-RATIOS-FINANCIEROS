@@ -40,9 +40,8 @@ if not st.session_state["autenticado"]:
 import time
 if st.session_state["login_exitoso"]:
     st.success(f"✅ Bienvenido, {st.session_state['usuario']}. Accediendo al entorno...")
-    time.sleep(2)  # Pausa 2 segundos para mostrar mensaje
     st.session_state["login_exitoso"] = False
-    st.experimental_rerun()
+    # No detenemos ni redirigimos: simplemente continúa el flujo
 
 # ===== BARRA LATERAL CON USUARIO Y LOGOUT =====
 with st.sidebar:
