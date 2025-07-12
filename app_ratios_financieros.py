@@ -139,15 +139,9 @@ def evaluar_ratio(nombre, valor):
 
     return "🔘", "Interpretación no definida."
 
-# ===== CARGA DE ARCHIVOS =====
-col1, col2 = st.columns(2)
-with col1:
-    balance_file = st.file_uploader("📁 Subir Balance de Situación", type=["xlsx"], key="balance")
-with col2:
-    pyg_file = st.file_uploader("📁 Subir Cuenta de Pérdidas y Ganancias", type=["xlsx"], key="pyg")
-
 if balance_file and pyg_file:
     try:
+        # ===== CARGA DE DATOS =====
         activo_df = pd.read_excel(balance_file, sheet_name="Activo", skiprows=5)
         pasivo_df = pd.read_excel(balance_file, sheet_name="Pasivo", skiprows=5)
         pyg_df = pd.read_excel(pyg_file, sheet_name="Cuenta de Pérdidas y Ganancias", skiprows=5)
@@ -208,6 +202,69 @@ if balance_file and pyg_file:
             "⚖️ Endeudamiento y Solvencia": ["Endeudamiento Total", "Cobertura de Gastos Financieros", "Apalancamiento Financiero"],
             "🔄 Ciclo Operativo": ["Rotación de Existencias", "PMC (Clientes)", "PMP (Proveedores)", "Ciclo de Conversión de Caja"]
         }
+
+        st.subheader("📊 Panel de Indicadores por Categoría")
+        for categoria, lista_ratios in categorias.items():
+            st.markdown(f"### {categoria}")
+            col1, col2, col3 = st.columns(3)
+            for i, nombre in enumerate(lista_ratios):
+                valor = ratios[nombre]
+                icono, comentario = evaluar_ratio(nombre, valor)
+                display_valor = f"{valor:.2f}" if isinstance(valor, (int, float)) else "N/A"
+                col = [col1, col2, col3][i % 3]
+                col.metric(label=f"{icono} {nombre}", value=display_valor, help=comentario)
+
+        st.subheader("📄 Tabla Detallada con Interpretación")
+        tabla_ratios = []
+        for nombre, valor in ratios.items():
+            icono, comentario = evaluar_ratio(nombre, valor)
+            tabla_ratios.append({
+                "Ratio": nombre,
+                "Valor": round(valor, 4) if valor is not None else "N/A",
+                "Evaluación": icono,
+                "Comentario": comentario
+            })
+        tabla_df = pd.DataFrame(tabla_ratios)
+        st.dataframe(tabla_df, use_container_width=True)
+
+        # ===== GRÁFICOS SEPARADOS =====
+        st.subheader("📈 Representación Gráfica por Categoría de Ratios")
+        grafico_df = tabla_df[tabla_df["Valor"] != "N/A"].copy()
+        grafico_df["Valor"] = pd.to_numeric(grafico_df["Valor"], errors="coerce")
+
+        # Separar proporcionales y ratios de plazo
+        ratios_dias = grafico_df[grafico_df["Ratio"].str.contains("PMC|PMP|Ciclo", case=False)]
+        ratios_prop = grafico_df[~grafico_df["Ratio"].str.contains("PMC|PMP|Ciclo", case=False)]
+
+        st.markdown("### 📊 Ratios Proporcionales")
+        fig1, ax1 = plt.subplots(figsize=(8, 5))
+        ax1.barh(ratios_prop["Ratio"], ratios_prop["Valor"], color="steelblue")
+        ax1.set_xlabel("Valor")
+        ax1.set_title("Ratios Financieros - Proporciones")
+        st.pyplot(fig1)
+
+        st.markdown("### 🕒 Ratios de Plazo (días)")
+        fig2, ax2 = plt.subplots(figsize=(8, 5))
+        ax2.barh(ratios_dias["Ratio"], ratios_dias["Valor"], color="darkorange")
+        ax2.set_xlabel("Días")
+        ax2.set_title("Ratios Financieros - Periodos")
+        st.pyplot(fig2)
+
+        # ===== EXPORTACIÓN =====
+        st.subheader("📥 Exportar Resultados")
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            tabla_df.to_excel(writer, index=False, sheet_name="Ratios Financieros")
+        st.download_button(
+            label="📤 Descargar en Excel",
+            data=output.getvalue(),
+            file_name="ratios_financieros.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    except Exception as e:
+        st.error(f"❌ Error al procesar los archivos: {e}")
+
 
         # ===== DASHBOARD POR CATEGORÍA =====
         st.subheader("📊 Panel de Indicadores por Categoría")
