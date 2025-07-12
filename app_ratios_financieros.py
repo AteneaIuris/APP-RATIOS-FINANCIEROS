@@ -37,8 +37,23 @@ if not st.session_state["autenticado"]:
     st.stop()
 
 # ===== TRANSICIÓN POST-LOGIN (una sola vez) =====
+import streamlit.components.v1 as components
+
 if st.session_state.get("acceso_concedido"):
     st.success(f"✅ Bienvenido, {st.session_state['usuario']}. Accediendo al entorno...")
+
+    # Recarga automática en 1.5 segundos usando JavaScript
+    components.html(
+        """
+        <script>
+        setTimeout(function(){
+            window.location.reload();
+        }, 1500);
+        </script>
+        """,
+        height=0
+    )
+
     st.session_state["acceso_concedido"] = False
     st.stop()
 
