@@ -40,9 +40,9 @@ usuario_actual = st.session_state.get("usuario", "Usuario")
 with st.sidebar:
     st.markdown(f"👤 Usuario: **{usuario_actual}**")
     if st.button("Cerrar sesión"):
-        st.session_state["autenticado"] = False
-        st.session_state["usuario"] = ""
-        st.experimental_rerun()
+    st.session_state.clear()
+    st.success("🔒 Sesión cerrada correctamente.")
+    st.stop()
 
 # ===== FUNCIONES =====
 def buscar_valor_por_nombre(df, clave, columna_valor='Importe 2024'):
