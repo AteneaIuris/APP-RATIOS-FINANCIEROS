@@ -18,12 +18,13 @@ USUARIOS = {
 def autenticar():
     st.markdown("## 🔐 Acceso restringido")
     usuario = st.text_input("Usuario", key="usuario_login")
-    contraseña = st.text_input("Contraseña", type="password", key="clave_login")
-    
+    contrasena = st.text_input("Contraseña", type="password", key="clave_login")
+
     if st.button("Iniciar sesión"):
-        if usuario in USUARIOS and USUARIOS[usuario] == contraseña:
+        if usuario in USUARIOS and USUARIOS[usuario] == contrasena:
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
+            st.success(f"✅ Bienvenido, {usuario}. Accediendo al entorno...")
         else:
             st.error("❌ Usuario o contraseña incorrectos")
 
@@ -40,9 +41,9 @@ usuario_actual = st.session_state.get("usuario", "Usuario")
 with st.sidebar:
     st.markdown(f"👤 Usuario: **{usuario_actual}**")
     if st.button("Cerrar sesión"):
-    st.session_state.clear()
-    st.success("🔒 Sesión cerrada correctamente.")
-    st.stop()
+        st.session_state.clear()
+        st.success("🔒 Sesión cerrada correctamente.")
+        st.stop()
 
 # ===== FUNCIONES =====
 def buscar_valor_por_nombre(df, clave, columna_valor='Importe 2024'):
