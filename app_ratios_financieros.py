@@ -15,63 +15,52 @@ USUARIOS = {
     "Miguel": "ateneaiuris"
 }
 
+# ===== INICIALIZACIÓN DE ESTADOS =====
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+if "acceso_concedido" not in st.session_state:
+    st.session_state["acceso_concedido"] = False
+if "usuario" not in st.session_state:
+    st.session_state["usuario"] = ""
+
 # ===== FUNCIÓN DE AUTENTICACIÓN =====
 def autenticar():
     st.markdown("## 🔐 Acceso restringido")
     usuario = st.text_input("Usuario", key="usuario_login")
     contrasena = st.text_input("Contraseña", type="password", key="clave_login")
-
+    
     if st.button("Iniciar sesión"):
         if usuario in USUARIOS and USUARIOS[usuario] == contrasena:
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
-            st.session_state["acceso_concedido"] = True  # Marca acceso nuevo
-            st.success(f"✅ Bienvenido, {usuario}. Accediendo al entorno...")
-
-            # Redirige con JavaScript tras login
-            components.html(
-                """
-                <script>
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 1500);
-                </script>
-                """,
-                height=0
-            )
-            st.stop()
+            st.session_state["acceso_concedido"] = True
         else:
             st.error("❌ Usuario o contraseña incorrectos")
 
-# ===== CONTROL DE ACCESO =====
-if "autenticado" not in st.session_state:
-    st.session_state["autenticado"] = False
-
+# ===== CONTROL DE ACCESO INICIAL =====
 if not st.session_state["autenticado"]:
     autenticar()
     st.stop()
 
-# ===== TRANSICIÓN POST-LOGIN (SOLO UNA VEZ) =====
-if st.session_state.get("acceso_concedido"):
+# ===== TRANSICIÓN TRAS LOGIN (UNA VEZ) =====
+if st.session_state["acceso_concedido"]:
     st.success(f"✅ Bienvenido, {st.session_state['usuario']}. Accediendo al entorno...")
 
-    components.html(
-        """
+    # Recarga automática tras 1.5 segundos para desbloquear contenido
+    components.html("""
         <script>
             setTimeout(function() {
                 window.location.reload();
             }, 1500);
         </script>
-        """,
-        height=0
-    )
+    """, height=0)
+
     st.session_state["acceso_concedido"] = False
     st.stop()
 
 # ===== PANEL LATERAL Y CIERRE DE SESIÓN =====
-usuario_actual = st.session_state.get("usuario", "Usuario")
 with st.sidebar:
-    st.markdown(f"👤 Usuario: **{usuario_actual}**")
+    st.markdown(f"👤 Usuario: **{st.session_state['usuario']}**")
     if st.button("Cerrar sesión"):
         st.session_state.clear()
         st.success("🔒 Sesión cerrada correctamente.")
