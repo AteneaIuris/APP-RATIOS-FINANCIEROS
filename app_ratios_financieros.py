@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import io
 import matplotlib.pyplot as plt
@@ -24,7 +25,21 @@ def autenticar():
         if usuario in USUARIOS and USUARIOS[usuario] == contrasena:
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
-            st.session_state["acceso_concedido"] = True  # bandera de acceso
+            st.session_state["acceso_concedido"] = True  # Marca acceso nuevo
+            st.success(f"✅ Bienvenido, {usuario}. Accediendo al entorno...")
+
+            # Redirige con JavaScript tras login
+            components.html(
+                """
+                <script>
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
+                </script>
+                """,
+                height=0
+            )
+            st.stop()
         else:
             st.error("❌ Usuario o contraseña incorrectos")
 
@@ -36,28 +51,24 @@ if not st.session_state["autenticado"]:
     autenticar()
     st.stop()
 
-# ===== TRANSICIÓN POST-LOGIN (una sola vez) =====
-import streamlit.components.v1 as components
-
+# ===== TRANSICIÓN POST-LOGIN (SOLO UNA VEZ) =====
 if st.session_state.get("acceso_concedido"):
     st.success(f"✅ Bienvenido, {st.session_state['usuario']}. Accediendo al entorno...")
 
-    # Recarga automática en 1.5 segundos usando JavaScript
     components.html(
         """
         <script>
-        setTimeout(function(){
-            window.location.reload();
-        }, 1500);
+            setTimeout(function() {
+                window.location.reload();
+            }, 1500);
         </script>
         """,
         height=0
     )
-
     st.session_state["acceso_concedido"] = False
     st.stop()
 
-# ===== PERFIL ACTIVO Y CIERRE DE SESIÓN =====
+# ===== PANEL LATERAL Y CIERRE DE SESIÓN =====
 usuario_actual = st.session_state.get("usuario", "Usuario")
 with st.sidebar:
     st.markdown(f"👤 Usuario: **{usuario_actual}**")
