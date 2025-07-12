@@ -24,8 +24,6 @@ def autenticar():
         if usuario in USUARIOS and USUARIOS[usuario] == contraseña:
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
-            st.success(f"✅ Bienvenido, {usuario}. Accediendo al entorno...")
-            st.experimental_rerun()
         else:
             st.error("❌ Usuario o contraseña incorrectos")
 
