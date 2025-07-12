@@ -1,10 +1,21 @@
 import streamlit as st
+import pandas as pd
+import io
+import matplotlib.pyplot as plt
 
 # ===== USUARIOS AUTORIZADOS =====
 USUARIOS = {
     "Sergio": "ateneaiuris",
     "Miguel": "ateneaiuris"
 }
+
+# ===== INICIALIZACIÓN DE VARIABLES DE SESIÓN =====
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+if "usuario" not in st.session_state:
+    st.session_state["usuario"] = ""
+if "login_exitoso" not in st.session_state:
+    st.session_state["login_exitoso"] = False
 
 # ===== FUNCIÓN DE AUTENTICACIÓN =====
 def autenticar():
@@ -16,35 +27,31 @@ def autenticar():
         if usuario in USUARIOS and USUARIOS[usuario] == contraseña:
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
-            st.experimental_rerun()  # se lanzará en la siguiente carga
+            st.session_state["login_exitoso"] = True
         else:
             st.error("❌ Usuario o contraseña incorrectos")
 
 # ===== CONTROL DE ACCESO =====
-if "autenticado" not in st.session_state:
-    st.session_state["autenticado"] = False
-
 if not st.session_state["autenticado"]:
     autenticar()
     st.stop()
 
-# ===== PERFIL ACTIVO Y CIERRE DE SESIÓN =====
-usuario_actual = st.session_state.get("usuario", "Usuario")
+# ===== TRATAMIENTO DEL PRIMER ACCESO (tras login) =====
+if st.session_state["login_exitoso"]:
+    st.success(f"✅ Bienvenido, {st.session_state['usuario']}. Accediendo al entorno...")
+    st.session_state["login_exitoso"] = False
+    st.stop()
 
+# ===== BARRA LATERAL CON USUARIO Y LOGOUT =====
 with st.sidebar:
-    st.markdown(f"👤 Usuario: **{usuario_actual}**")
+    st.markdown(f"👤 Usuario: **{st.session_state['usuario']}**")
     if st.button("Cerrar sesión"):
         st.session_state["autenticado"] = False
         st.session_state["usuario"] = ""
         st.experimental_rerun()
 
-import streamlit as st
-import pandas as pd
-import io
-import matplotlib.pyplot as plt
-
+# ===== CONFIGURACIÓN GENERAL DE LA APP =====
 st.set_page_config(page_title="Ratios Financieros Avanzados", layout="wide")
-
 st.title("📊 Dashboard de Ratios Financieros")
 st.markdown("Esta herramienta permite calcular, interpretar y visualizar ratios financieros clave a partir de un balance de situación y cuenta de pérdidas y ganancias en formato Excel.")
 
