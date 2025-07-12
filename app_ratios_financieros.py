@@ -14,7 +14,22 @@ USUARIOS = {
     "Miguel": "ateneaiuris"
 }
 
-# ===== AUTENTICACIÓN =====
+# ===== FUNCIÓN DE AUTENTICACIÓN =====
+def autenticar():
+    st.markdown("## 🔐 Acceso restringido")
+    usuario = st.text_input("Usuario", key="usuario_login")
+    contraseña = st.text_input("Contraseña", type="password", key="clave_login")
+    
+    if st.button("Iniciar sesión"):
+        if usuario in USUARIOS and USUARIOS[usuario] == contraseña:
+            st.session_state["autenticado"] = True
+            st.session_state["usuario"] = usuario
+            st.success(f"✅ Bienvenido, {usuario}. Accediendo al entorno...")
+            st.experimental_rerun()
+        else:
+            st.error("❌ Usuario o contraseña incorrectos")
+
+# ===== CONTROL DE ACCESO =====
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
@@ -22,13 +37,7 @@ if not st.session_state["autenticado"]:
     autenticar()
     st.stop()
 
-if "autenticado" not in st.session_state:
-    st.session_state["autenticado"] = False
-
-if not st.session_state["autenticado"]:
-    autenticar()
-    st.stop()
-
+# ===== PERFIL ACTIVO Y CIERRE DE SESIÓN =====
 usuario_actual = st.session_state.get("usuario", "Usuario")
 with st.sidebar:
     st.markdown(f"👤 Usuario: **{usuario_actual}**")
