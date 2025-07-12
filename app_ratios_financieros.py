@@ -15,18 +15,12 @@ USUARIOS = {
 }
 
 # ===== AUTENTICACIÓN =====
-def autenticar():
-    st.markdown("## 🔐 Acceso restringido")
-    usuario = st.text_input("Usuario", key="usuario_login")
-    contraseña = st.text_input("Contraseña", type="password", key="clave_login")
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
 
-    if st.button("Iniciar sesión"):
-        if usuario in USUARIOS and USUARIOS[usuario] == contraseña:
-            st.session_state["autenticado"] = True
-            st.session_state["usuario"] = usuario
-            st.experimental_rerun()
-        else:
-            st.error("❌ Usuario o contraseña incorrectos")
+if not st.session_state["autenticado"]:
+    autenticar()
+    st.stop()
 
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
