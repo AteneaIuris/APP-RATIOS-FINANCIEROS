@@ -244,28 +244,29 @@ if balance_file and pyg_file:
         tabla_df = pd.DataFrame(tabla_ratios)
         st.dataframe(tabla_df, use_container_width=True)
 
-        # ===== GRÁFICO =====
-        st.subheader("📈 Representación Gráfica")
-        grafico_df = tabla_df[tabla_df["Valor"] != "N/A"].copy()
-        grafico_df["Valor"] = pd.to_numeric(grafico_df["Valor"])
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.barh(grafico_df["Ratio"], grafico_df["Valor"], color="steelblue")
-        ax.set_xlabel("Valor")
-        ax.set_title("Ratios Financieros 2024")
-        st.pyplot(fig)
+       # ===== REPRESENTACIÓN GRÁFICA SEPARADA POR TIPO DE RATIO =====
+st.subheader("📈 Representación Gráfica por Categoría de Ratios")
 
-        # ===== EXPORTACIÓN EXCEL =====
-        st.subheader("📥 Exportar Resultados")
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            tabla_df.to_excel(writer, index=False, sheet_name="Ratios Financieros")
-        st.download_button(
-            label="📤 Descargar en Excel",
-            data=output.getvalue(),
-            file_name="ratios_financieros.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+# Preparar los datos
+grafico_df = tabla_df[tabla_df["Valor"] != "N/A"].copy()
+grafico_df["Valor"] = pd.to_numeric(grafico_df["Valor"], errors="coerce")
 
-    except Exception as e:
-        st.error(f"❌ Error al procesar los archivos: {e}")
+# Separar ratios proporcionales de los de duración en días
+ratios_dias = grafico_df[grafico_df["Ratio"].str.contains("PMC|PMP|Ciclo", case=False)]
+ratios_prop = grafico_df[~grafico_df["Ratio"].str.contains("PMC|PMP|Ciclo", case=False)]
 
+# ===== Gráfico 1: Ratios Proporcionales =====
+st.markdown("### 📊 Ratios Proporcionales (Escala Normalizada)")
+fig1, ax1 = plt.subplots(figsize=(8, 5))
+ax1.barh(ratios_prop["Ratio"], ratios_prop["Valor"], color="steelblue")
+ax1.set_xlabel("Valor")
+ax1.set_title("Ratios Financieros - Proporciones")
+st.pyplot(fig1)
+
+# ===== Gráfico 2: Ratios en Días =====
+st.markdown("### 🕒 Ratios de Plazo (en días)")
+fig2, ax2 = plt.subplots(figsize=(8, 5))
+ax2.barh(ratios_dias["Ratio"], ratios_dias["Valor"], color="darkorange")
+ax2.set_xlabel("Días")
+ax2.set_title("Ratios Financieros - Periodos")
+st.pyplot(fig2)
